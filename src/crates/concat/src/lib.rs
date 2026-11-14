@@ -194,6 +194,14 @@ fn timestamp_motion(index: i32) -> AutoMotion {
 /// Re-validates the pasted script against the live project without editing it.
 fn refresh_timestamp_validation(state: &Studio, editor: &Editor) {
     let script = editor.get_timestamp_script().to_string();
+    if script.trim().is_empty() {
+        editor.set_timestamp_row_count(0);
+        editor.set_timestamp_validation(
+            "Paste timestamp rows to validate media and timeline placement.".into(),
+        );
+        editor.set_timestamp_can_apply(false);
+        return;
+    }
     let track_index = editor.get_timestamp_track();
     let motion = timestamp_motion(editor.get_timestamp_motion());
 
