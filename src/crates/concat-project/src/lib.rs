@@ -34,6 +34,7 @@ pub mod speed;
 #[cfg(test)]
 mod speed_curve_tests;
 pub mod srt;
+pub mod timestamp;
 
 pub use commands::{
     Command, CommandError, Outcome, PlayheadSide, consolidation_clips, delete_to_playhead,
