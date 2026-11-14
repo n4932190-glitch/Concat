@@ -31,8 +31,44 @@ pub(super) fn apply(
                     reason: error.to_string(),
                 }
             })?;
-            if project.active().track(&track_id).is_none() {
+            let active = project.active();
+            if active.track(&track_id).is_none() {
                 return Err(CommandError::TrackGone);
+            }
+
+            // A script is a sequential picture run on one lane. Refuse
+            // overlaps rather than silently covering an existing shot or
+            // allowing two script rows to compete for the same frames.
+            for (index, placement) in placements.iter().enumerate() {
+                let entry = &entries[index];
+                if let Some(existing) = active.clips.iter().find(|clip| {
+                    clip.track_id == track_id
+                        && placement.start < clip.start + clip.duration
+                        && clip.start < placement.start + placement.duration
+                }) {
+                    return Err(CommandError::InvalidTimestampScript {
+                        reason: format!(
+                            "line {}: overlaps existing clip '{}'; choose an empty picture lane or move that clip first",
+                            entry.line, existing.name
+                        ),
+                    });
+                }
+                if let Some((previous_index, previous)) = placements
+                    .iter()
+                    .enumerate()
+                    .take(index)
+                    .find(|(_, previous)| {
+                        placement.start < previous.start + previous.duration
+                            && previous.start < placement.start + placement.duration
+                    })
+                {
+                    return Err(CommandError::InvalidTimestampScript {
+                        reason: format!(
+                            "line {}: overlaps line {} in the pasted script",
+                            entry.line, entries[previous_index].line
+                        ),
+                    });
+                }
             }
 
             // Resolve every media item before borrowing the timeline mutably:
