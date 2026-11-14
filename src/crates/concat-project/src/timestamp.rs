@@ -334,6 +334,22 @@ mod tests {
     }
 
     #[test]
+    fn overlapping_script_rows_are_rejected_without_partial_placement() {
+        use crate::commands::Command;
+        use crate::editor::Editor;
+
+        let mut editor = Editor::new();
+        editor.project_mut().media = project().media;
+        let result = editor.apply(Command::PlaceTimestampScript {
+            script: "00:00:00 - 00:00:03 | short.mp4\\n00:00:02 - 00:00:05 | long.mp4".into(),
+            track_id: "T1".into(),
+            motion: AutoMotion::None,
+        });
+        assert!(result.is_err());
+        assert!(editor.project().active().clips.is_empty());
+    }
+
+    #[test]
     fn rejects_missing_labels_and_non_positive_spans() {
         assert!(parse_script("00:00:01 - 00:00:01 | Image 1").is_err());
         let project = project();
