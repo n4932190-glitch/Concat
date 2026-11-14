@@ -26,11 +26,12 @@ pub(super) fn apply(
                     reason: error.to_string(),
                 }
             })?;
-            let placements = crate::timestamp::resolve(&entries, project, motion).map_err(
-                |error| CommandError::InvalidTimestampScript {
-                    reason: error.to_string(),
-                },
-            )?;
+            let placements =
+                crate::timestamp::resolve(&entries, project, motion).map_err(|error| {
+                    CommandError::InvalidTimestampScript {
+                        reason: error.to_string(),
+                    }
+                })?;
             let active = project.active();
             if active.track(&track_id).is_none() {
                 return Err(CommandError::TrackGone);
@@ -53,7 +54,7 @@ pub(super) fn apply(
                         ),
                     });
                 }
-                if let Some((previous_index, previous)) = placements
+                if let Some((previous_index, _)) = placements
                     .iter()
                     .enumerate()
                     .take(index)

@@ -196,9 +196,7 @@ fn refresh_timestamp_validation(state: &Studio, editor: &Editor) {
     let script = editor.get_timestamp_script().to_string();
     if script.trim().is_empty() {
         editor.set_timestamp_row_count(0);
-        editor.set_timestamp_validation(
-            i18n::t("timestamp.emptyPrompt").into(),
-        );
+        editor.set_timestamp_validation(i18n::t("timestamp.emptyPrompt").into());
         editor.set_timestamp_can_apply(false);
         return;
     }
@@ -206,8 +204,8 @@ fn refresh_timestamp_validation(state: &Studio, editor: &Editor) {
     let motion = timestamp_motion(editor.get_timestamp_motion());
 
     let checked: Result<usize, String> = (|| {
-        let entries = concat_project::timestamp::parse_script(&script)
-            .map_err(|error| error.to_string())?;
+        let entries =
+            concat_project::timestamp::parse_script(&script).map_err(|error| error.to_string())?;
         let track = state
             .timeline()
             .tracks
@@ -235,14 +233,15 @@ fn refresh_timestamp_validation(state: &Studio, editor: &Editor) {
                 ));
             }
 
-            if let Some((other_index, _)) = placements
-                .iter()
-                .enumerate()
-                .take(index)
-                .find(|(_, previous)| {
-                    placement.start < previous.start + previous.duration
-                        && previous.start < placement.start + placement.duration
-                })
+            if let Some((other_index, _)) =
+                placements
+                    .iter()
+                    .enumerate()
+                    .take(index)
+                    .find(|(_, previous)| {
+                        placement.start < previous.start + previous.duration
+                            && previous.start < placement.start + placement.duration
+                    })
             {
                 return Err(i18n::tf(
                     "timestamp.overlapRows",
@@ -257,9 +256,7 @@ fn refresh_timestamp_validation(state: &Studio, editor: &Editor) {
     match checked {
         Ok(rows) => {
             editor.set_timestamp_row_count(rows as i32);
-            editor.set_timestamp_validation(
-                i18n::t("timestamp.valid").into(),
-            );
+            editor.set_timestamp_validation(i18n::t("timestamp.valid").into());
             editor.set_timestamp_can_apply(true);
         }
         Err(reason) => {

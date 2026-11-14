@@ -104,10 +104,18 @@ pub fn parse_script(text: &str) -> Result<Vec<ScriptEntry>, TimestampScriptError
                 "expected a start and end timestamp separated by '-' or '-->'",
             )
         })?;
-        let start = parse_time(start_text.trim())
-            .ok_or_else(|| error(line_number, "invalid start time; use HH:MM:SS or HH:MM:SS.mmm"))?;
-        let end = parse_time(end_text.trim())
-            .ok_or_else(|| error(line_number, "invalid end time; use HH:MM:SS or HH:MM:SS.mmm"))?;
+        let start = parse_time(start_text.trim()).ok_or_else(|| {
+            error(
+                line_number,
+                "invalid start time; use HH:MM:SS or HH:MM:SS.mmm",
+            )
+        })?;
+        let end = parse_time(end_text.trim()).ok_or_else(|| {
+            error(
+                line_number,
+                "invalid end time; use HH:MM:SS or HH:MM:SS.mmm",
+            )
+        })?;
         if end <= start {
             return Err(error(line_number, "end time must be later than start time"));
         }
@@ -118,7 +126,10 @@ pub fn parse_script(text: &str) -> Result<Vec<ScriptEntry>, TimestampScriptError
             ));
         }
         if end > 360_000.0 {
-            return Err(error(line_number, "timestamp exceeds the 100-hour project limit"));
+            return Err(error(
+                line_number,
+                "timestamp exceeds the 100-hour project limit",
+            ));
         }
 
         entries.push(ScriptEntry {
@@ -289,7 +300,9 @@ fn parse_time(text: &str) -> Option<f64> {
                 .map(|parsed| parsed * 10u64.pow((3 - value.len()) as u32))
         })
         .unwrap_or(0);
-    let total = hours.checked_mul(3600)?.checked_add(minutes * 60 + seconds)?;
+    let total = hours
+        .checked_mul(3600)?
+        .checked_add(minutes * 60 + seconds)?;
     Some(total as f64 + millis as f64 / 1000.0)
 }
 
@@ -360,10 +373,9 @@ mod tests {
 
     #[test]
     fn parses_simple_and_subrip_style_ranges() {
-        let rows = parse_script(
-            "00:00:00 - 00:00:05 | Image 1\n00:00:05.5 --> 00:00:08.000 | short.mp4",
-        )
-        .unwrap();
+        let rows =
+            parse_script("00:00:00 - 00:00:05 | Image 1\n00:00:05.5 --> 00:00:08.000 | short.mp4")
+                .unwrap();
         assert_eq!(rows.len(), 2);
         assert_eq!((rows[0].start, rows[0].end), (0.0, 5.0));
         assert_eq!((rows[1].start, rows[1].end), (5.5, 8.0));
@@ -373,10 +385,9 @@ mod tests {
     #[test]
     fn resolver_trims_long_videos_and_slows_short_ones() {
         let project = project();
-        let entries = parse_script(
-            "00:00:00 - 00:00:03 | short.mp4\n00:00:03 - 00:00:06 | long.mp4",
-        )
-        .unwrap();
+        let entries =
+            parse_script("00:00:00 - 00:00:03 | short.mp4\n00:00:03 - 00:00:06 | long.mp4")
+                .unwrap();
         let plan = resolve(&entries, &project, AutoMotion::None).unwrap();
         assert!((plan[0].speed - (2.0 / 3.0)).abs() < 1e-9);
         assert_eq!(plan[0].duration, 3.0);
@@ -402,8 +413,7 @@ mod tests {
         editor.project_mut().media = project().media;
         editor
             .apply(Command::PlaceTimestampScript {
-                script:
-                    "00:00:00 - 00:00:03 | short.mp4\n00:00:03 - 00:00:06 | long.mp4".into(),
+                script: "00:00:00 - 00:00:03 | short.mp4\n00:00:03 - 00:00:06 | long.mp4".into(),
                 track_id: "T1".into(),
                 motion: AutoMotion::ZoomIn,
             })
@@ -432,8 +442,7 @@ mod tests {
         let mut editor = Editor::new();
         editor.project_mut().media = project().media;
         let result = editor.apply(Command::PlaceTimestampScript {
-            script:
-                "00:00:00 - 00:00:03 | short.mp4\n00:00:03 - 00:00:05 | absent.mp4".into(),
+            script: "00:00:00 - 00:00:03 | short.mp4\n00:00:03 - 00:00:05 | absent.mp4".into(),
             track_id: "T1".into(),
             motion: AutoMotion::None,
         });
@@ -449,8 +458,7 @@ mod tests {
         let mut editor = Editor::new();
         editor.project_mut().media = project().media;
         let result = editor.apply(Command::PlaceTimestampScript {
-            script:
-                "00:00:00 - 00:00:03 | short.mp4\n00:00:02 - 00:00:05 | long.mp4".into(),
+            script: "00:00:00 - 00:00:03 | short.mp4\n00:00:02 - 00:00:05 | long.mp4".into(),
             track_id: "T1".into(),
             motion: AutoMotion::None,
         });
