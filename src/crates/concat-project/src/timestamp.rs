@@ -129,8 +129,12 @@ pub fn resolve(
     entries
         .iter()
         .map(|entry| {
-            let media = find_media(&entry.label, project)
-                .ok_or_else(|| error(entry.line, &format!("no media item matches '{}'", entry.label)))?;
+            let media = find_media(&entry.label, project).ok_or_else(|| {
+                error(
+                    entry.line,
+                    &format!("no media item matches '{}'", entry.label),
+                )
+            })?;
             if media.kind == MediaKind::Audio {
                 return Err(error(
                     entry.line,
