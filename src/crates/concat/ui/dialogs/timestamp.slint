@@ -70,15 +70,31 @@ export component TimestampForm inherits VerticalLayout {
                 y: script-box.pad-y;
                 width: parent.width;
                 height: Math.max(self.preferred-height, script-box.view-height);
+                cursor-position-changed(at) => {
+                    script-box.reveal(at.y, self.font-size * 1.4);
+                }
                 text <=> root.draft;
                 color: Theme.fg;
-                font-size: Theme.fs;
+                font-size: Theme.fs-lg;
                 single-line: false;
                 wrap: word-wrap;
                 selection-background-color: Theme.accent;
                 selection-foreground-color: Theme.on-accent;
                 changed has-focus => { root.typing = self.has-focus; }
                 edited => { root.script-edited(self.text); }
+                // Home and End should move within the pasted script rather
+                // than bubbling up to the editor's playhead shortcuts.
+                key-pressed(event) => {
+                    if (event.text == Key.Home) {
+                        self.set-selection-offsets(0, 0);
+                        return accept;
+                    }
+                    if (event.text == Key.End) {
+                        self.set-selection-offsets(1000000000, 1000000000);
+                        return accept;
+                    }
+                    return reject;
+                }
             }
 
             if root.draft == "" && !script-input.has-focus: Text {
