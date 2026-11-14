@@ -16,7 +16,7 @@ use crate::model::{
     AppliedFilter, AudioTrack, Background, Clip, ClipKind, ClipMotion, ColorRange, ColorSpace,
     Crop, CustomFont, Cutout, CutoutMode, Enhanced, Framing, KeyEase, KeyProperty, Mask, MediaItem,
     MediaKind, MediaOrigin, Project, RunStyle, ShapeStyle, SpeedPoint, Stabilize, Stroke,
-    ClipKey, KeyEase, KeyProperty, TextStyle, Timeline, Track, Transition, VideoSettings, VoiceMix,
+    ClipKey, TextStyle, Timeline, Track, Transition, VideoSettings, VoiceMix,
 };
 use crate::timestamp::AutoMotion;
 
