@@ -344,7 +344,7 @@ mod tests {
         let mut editor = Editor::new();
         editor.project_mut().media = project().media;
         let result = editor.apply(Command::PlaceTimestampScript {
-            script: "00:00:00 - 00:00:03 | short.mp4\\n00:00:02 - 00:00:05 | long.mp4".into(),
+            script: "00:00:00 - 00:00:03 | short.mp4\n00:00:02 - 00:00:05 | long.mp4".into(),
             track_id: "T1".into(),
             motion: AutoMotion::None,
         });

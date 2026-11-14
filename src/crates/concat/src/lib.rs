@@ -1339,11 +1339,12 @@ fn start(project: Option<std::path::PathBuf>, smoke: bool) -> Result<(), slint::
             editor.set_timestamp_can_apply(false);
             return;
         };
+        let track_id = track.id.clone();
         let script = editor.get_timestamp_script().to_string();
         let motion = timestamp_motion(editor.get_timestamp_motion());
         let result = state.apply(concat_project::Command::PlaceTimestampScript {
             script,
-            track_id: track.id.clone(),
+            track_id,
             motion,
         });
         if result.is_some() {
