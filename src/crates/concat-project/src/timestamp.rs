@@ -92,6 +92,12 @@ pub fn parse_script(text: &str) -> Result<Vec<ScriptEntry>, TimestampScriptError
         if end <= start {
             return Err(error(line_number, "end time must be later than start time"));
         }
+        if end - start < 1.0 / 60.0 {
+            return Err(error(line_number, "duration must be at least one frame (1/60 second)"));
+        }
+        if end > 360_000.0 {
+            return Err(error(line_number, "timestamp exceeds the 100-hour project limit"));
+        }
 
         entries.push(ScriptEntry {
             line: line_number,
@@ -214,11 +220,16 @@ fn parse_time(text: &str) -> Option<f64> {
     if parts.next().is_some() || minutes >= 60 || seconds >= 60 {
         return None;
     }
-    let millis = fraction.map(|value| {
-        let parsed = value.parse::<u64>().ok()?;
-        Some(parsed * 10u64.pow((3 - value.len()) as u32))
-    }).flatten().unwrap_or(0);
-    Some((hours * 3600 + minutes * 60 + seconds) as f64 + millis as f64 / 1000.0)
+    let millis = fraction
+        .and_then(|value| {
+            value
+                .parse::<u64>()
+                .ok()
+                .map(|parsed| parsed * 10u64.pow((3 - value.len()) as u32))
+        })
+        .unwrap_or(0);
+    let total = hours.checked_mul(3600)?.checked_add(minutes * 60 + seconds)?;
+    Some(total as f64 + millis as f64 / 1000.0)
 }
 
 fn error(line: usize, reason: &str) -> TimestampScriptError {
@@ -279,6 +290,47 @@ mod tests {
         let plan = resolve(&entries, &project, AutoMotion::VerticalScroll).unwrap();
         assert_eq!(plan[0].media_id, "m1");
         assert_eq!(plan[0].motion, AutoMotion::VerticalScroll);
+    }
+
+    #[test]
+    fn command_places_clips_at_exact_times_and_applies_motion() {
+        use crate::commands::Command;
+        use crate::editor::Editor;
+
+        let mut editor = Editor::new();
+        editor.project_mut().media = project().media;
+        editor.apply(Command::PlaceTimestampScript {
+            script: "00:00:00 - 00:00:03 | short.mp4\\n00:00:03 - 00:00:06 | long.mp4".into(),
+            track_id: "T1".into(),
+            motion: AutoMotion::ZoomIn,
+        }).unwrap();
+
+        let timeline = editor.project().active();
+        assert_eq!(timeline.clips.len(), 2);
+        assert_eq!(timeline.clips[0].start, 0.0);
+        assert_eq!(timeline.clips[0].duration, 3.0);
+        assert!((timeline.clips[0].speed - 2.0 / 3.0).abs() < 1e-9);
+        assert_eq!(timeline.clips[1].start, 3.0);
+        assert_eq!(timeline.clips[1].duration, 3.0);
+        assert_eq!(timeline.clips[1].speed, 1.0);
+        assert_eq!(timeline.clips[0].keys.len(), 2);
+        assert_eq!(timeline.clips[0].keys[0].property, crate::model::KeyProperty::Scale);
+    }
+
+    #[test]
+    fn a_bad_later_row_does_not_partially_place_the_script() {
+        use crate::commands::Command;
+        use crate::editor::Editor;
+
+        let mut editor = Editor::new();
+        editor.project_mut().media = project().media;
+        let result = editor.apply(Command::PlaceTimestampScript {
+            script: "00:00:00 - 00:00:03 | short.mp4\\n00:00:03 - 00:00:05 | absent.mp4".into(),
+            track_id: "T1".into(),
+            motion: AutoMotion::None,
+        });
+        assert!(result.is_err());
+        assert!(editor.project().active().clips.is_empty());
     }
 
     #[test]
