@@ -1079,7 +1079,7 @@
   "timestamp.motionVerticalScroll": "Vertical scroll",
   "timestamp.script": "Timestamp script",
   "timestamp.example": "00:00:00 - 00:00:05 | Image 1\n00:00:05 - 00:00:09 | Image 2",
-  "timestamp.scriptHelp": "One row per clip: HH:MM:SS - HH:MM:SS | Image 1. Milliseconds and SRT arrows are also accepted.",
+  "timestamp.scriptHelp": "One row per clip: HH:MM:SS - HH:MM:SS | Image 1. Milliseconds and SRT arrows are also accepted. Vertical scroll applies to still images only.",
   "timestamp.validation": "Timeline validation",
   "timestamp.ready": "{0} rows ready to place",
   "timestamp.notReady": "Not ready to place",

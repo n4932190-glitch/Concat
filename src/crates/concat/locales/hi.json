@@ -1079,7 +1079,7 @@
   "timestamp.motionVerticalScroll": "ऊपर से नीचे स्क्रॉल",
   "timestamp.script": "टाइमस्टैम्प स्क्रिप्ट",
   "timestamp.example": "00:00:00 - 00:00:05 | Image 1\n00:00:05 - 00:00:09 | Image 2",
-  "timestamp.scriptHelp": "हर क्लिप के लिए एक लाइन लिखें: HH:MM:SS - HH:MM:SS | Image 1। मिलीसेकंड और SRT वाला फ़ॉर्मेट भी मान्य है।",
+  "timestamp.scriptHelp": "हर क्लिप के लिए एक लाइन लिखें: HH:MM:SS - HH:MM:SS | Image 1। मिलीसेकंड और SRT वाला फ़ॉर्मेट भी मान्य है। वर्टिकल स्क्रॉल केवल स्थिर इमेज पर लागू होता है।",
   "timestamp.validation": "टाइमलाइन जाँच",
   "timestamp.ready": "{0} लाइनें लगाने के लिए तैयार हैं",
   "timestamp.notReady": "अभी लगाने के लिए तैयार नहीं",
