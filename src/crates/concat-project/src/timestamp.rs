@@ -439,6 +439,34 @@ mod tests {
     }
 
     #[test]
+    fn existing_timeline_clip_blocks_the_script_without_being_changed() {
+        use crate::commands::Command;
+        use crate::editor::Editor;
+
+        let mut editor = Editor::new();
+        editor.project_mut().media = project().media;
+        editor
+            .apply(Command::AddClip {
+                media_id: "m2".into(),
+                track_id: "T1".into(),
+                start: 1.0,
+                ripple: false,
+            })
+            .unwrap();
+
+        let result = editor.apply(Command::PlaceTimestampScript {
+            script: "00:00:00 - 00:00:03 | portrait.png".into(),
+            track_id: "T1".into(),
+            motion: AutoMotion::None,
+        });
+        assert!(result.is_err());
+        let clips = &editor.project().active().clips;
+        assert_eq!(clips.len(), 1);
+        assert_eq!(clips[0].start, 1.0);
+        assert_eq!(clips[0].media_id, "m2");
+    }
+
+    #[test]
     fn audio_only_media_cannot_be_placed_as_a_picture() {
         let mut project = project();
         project.media.push(MediaItem {
