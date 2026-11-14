@@ -439,6 +439,37 @@ mod tests {
     }
 
     #[test]
+    fn audio_only_media_cannot_be_placed_as_a_picture() {
+        let mut project = project();
+        project.media.push(MediaItem {
+            id: "m4".into(),
+            name: "voice.wav".into(),
+            path: "/media/voice.wav".into(),
+            kind: MediaKind::Audio,
+            duration: Some(4.0),
+            ..MediaItem::default()
+        });
+        let entries = parse_script("00:00:00 - 00:00:04 | voice.wav").unwrap();
+        let error = resolve(&entries, &project, AutoMotion::None).unwrap_err();
+        assert!(error.reason.contains("audio-only media"));
+    }
+
+    #[test]
+    fn duplicate_file_labels_are_rejected_as_ambiguous() {
+        let mut project = project();
+        project.media.push(MediaItem {
+            id: "m4".into(),
+            name: "portrait.png".into(),
+            path: "/other/portrait.png".into(),
+            kind: MediaKind::Image,
+            ..MediaItem::default()
+        });
+        let entries = parse_script("00:00:00 - 00:00:04 | portrait.png").unwrap();
+        let error = resolve(&entries, &project, AutoMotion::None).unwrap_err();
+        assert!(error.reason.contains("no media item matches"));
+    }
+
+    #[test]
     fn video_without_a_probed_duration_is_not_guessed() {
         let mut project = project();
         project.media[1].duration = None;
