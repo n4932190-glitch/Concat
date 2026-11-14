@@ -1295,13 +1295,13 @@ fn start(project: Option<std::path::PathBuf>, smoke: bool) -> Result<(), slint::
             .enumerate()
             .map(|(index, _)| format!("Track {}", index + 1).into())
             .collect();
-        editor.set_timestamp_tracks(ModelRc::from(VecModel::from(tracks.clone())));
+        editor.set_timestamp_tracks(ModelRc::from(Rc::new(VecModel::from(tracks.clone()))));
         let selected = editor.get_timestamp_track();
         if selected < 0 || selected as usize >= tracks.len() {
             editor.set_timestamp_track(0);
         }
         // Keep the user's draft when the dialog is closed and reopened.
-        refresh_timestamp_validation(state, &editor);
+        refresh_timestamp_validation(&state, &editor);
         editor.set_timestamp_open(true);
     }));
     editor.on_timestamp_closed(on_window!(|_state| {
@@ -1310,21 +1310,21 @@ fn start(project: Option<std::path::PathBuf>, smoke: bool) -> Result<(), slint::
     editor.on_timestamp_script_edited(on_window!(|state, text: SharedString| {
         let editor = app.global::<Editor>();
         editor.set_timestamp_script(text);
-        refresh_timestamp_validation(state, &editor);
+        refresh_timestamp_validation(&state, &editor);
     }));
     editor.on_timestamp_track_changed(on_window!(|state, index: i32| {
         let editor = app.global::<Editor>();
         editor.set_timestamp_track(index);
-        refresh_timestamp_validation(state, &editor);
+        refresh_timestamp_validation(&state, &editor);
     }));
     editor.on_timestamp_motion_changed(on_window!(|state, index: i32| {
         let editor = app.global::<Editor>();
         editor.set_timestamp_motion(index);
-        refresh_timestamp_validation(state, &editor);
+        refresh_timestamp_validation(&state, &editor);
     }));
     editor.on_timestamp_apply(on_window!(|state| {
         let editor = app.global::<Editor>();
-        refresh_timestamp_validation(state, &editor);
+        refresh_timestamp_validation(&state, &editor);
         if !editor.get_timestamp_can_apply() {
             return;
         }
