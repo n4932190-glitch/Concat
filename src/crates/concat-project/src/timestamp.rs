@@ -45,10 +45,15 @@ pub struct ScriptEntry {
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TimedMediaPlacement {
+    /// Id of the media-bin item resolved from the script label.
     pub media_id: String,
+    /// Start of the clip on the active timeline, in seconds.
     pub start: f64,
+    /// Time occupied by the clip on the timeline, in seconds.
     pub duration: f64,
+    /// Playback multiplier: 1.0 is normal speed; values below 1.0 slow it down.
     pub speed: f64,
+    /// Movement to apply to the placed picture.
     pub motion: AutoMotion,
 }
 
@@ -56,7 +61,9 @@ pub struct TimedMediaPlacement {
 #[derive(Clone, Debug, Error, PartialEq, Eq)]
 #[error("line {line}: {reason}")]
 pub struct TimestampScriptError {
+    /// One-based line number in the pasted script.
     pub line: usize,
+    /// Human-readable reason the line or script was rejected.
     pub reason: String,
 }
 
