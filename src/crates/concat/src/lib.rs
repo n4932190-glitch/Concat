@@ -181,7 +181,6 @@ pub fn report_startup_failure(error: &slint::PlatformError) {
     platform::report_startup_failure(&error);
 }
 
-
 /// The automatic movement selected in the timestamp importer.
 fn timestamp_motion(index: i32) -> AutoMotion {
     match index {
