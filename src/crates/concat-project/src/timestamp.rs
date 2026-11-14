@@ -10,6 +10,9 @@ use thiserror::Error;
 
 use crate::model::{MediaKind, Project};
 
+/// Maximum number of placements accepted in one pasted script.
+const MAX_SCRIPT_ROWS: usize = 1_000;
+
 /// Automatic picture movement applied while a timestamp script is placed.
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -79,6 +82,12 @@ pub fn parse_script(text: &str) -> Result<Vec<ScriptEntry>, TimestampScriptError
         let line = raw.trim();
         if line.is_empty() || line.starts_with('#') {
             continue;
+        }
+        if entries.len() >= MAX_SCRIPT_ROWS {
+            return Err(error(
+                line_number,
+                "a timestamp script cannot contain more than 1,000 placements",
+            ));
         }
 
         let (timing, label) = line
@@ -336,6 +345,17 @@ mod tests {
             ..Timeline::default()
         })];
         project
+    }
+
+    #[test]
+    fn rejects_scripts_larger_than_the_placement_limit() {
+        let row = "00:00:00 - 00:00:01 | Image 1";
+        let script = std::iter::repeat_n(row, MAX_SCRIPT_ROWS + 1)
+            .collect::<Vec<_>>()
+            .join("\n");
+        let error = parse_script(&script).unwrap_err();
+        assert_eq!(error.line, MAX_SCRIPT_ROWS + 1);
+        assert!(error.reason.contains("1,000 placements"));
     }
 
     #[test]
