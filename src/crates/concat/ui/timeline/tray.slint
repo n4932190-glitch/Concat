@@ -417,7 +417,13 @@ export component TimelineTray inherits Rectangle {
             label: "Timestamp script";
             icon-size: 16px;
             checked: Editor.timestamp-open;
-            clicked => { Editor.timestamp-opened(); }
+            clicked => {
+                if (Editor.timestamp-open) {
+                    Editor.timestamp-closed();
+                } else {
+                    Editor.timestamp-opened();
+                }
+            }
         }
         TrayButton {
             glyph: Glyph.text-mark;
