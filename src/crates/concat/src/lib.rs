@@ -1285,9 +1285,12 @@ fn start(project: Option<std::path::PathBuf>, smoke: bool) -> Result<(), slint::
     editor.on_add_track(on_window!(|state, bottom: bool| {
         state.apply(concat_project::Command::AddTrack { bottom });
     }));
-    let timestamp_open_app = app.clone();
+    let timestamp_open_app = app.as_weak();
     editor.on_timestamp_opened(on_window!(|state| {
-        let editor = timestamp_open_app.global::<Editor>();
+        let Some(app) = timestamp_open_app.upgrade() else {
+            return;
+        };
+        let editor = app.global::<Editor>();
         let tracks: Vec<SharedString> = state
             .timeline()
             .tracks
@@ -1305,31 +1308,46 @@ fn start(project: Option<std::path::PathBuf>, smoke: bool) -> Result<(), slint::
         refresh_timestamp_validation(&state, &editor);
         editor.set_timestamp_open(true);
     }));
-    let timestamp_closed_app = app.clone();
+    let timestamp_closed_app = app.as_weak();
     editor.on_timestamp_closed(on_window!(|_state| {
-        timestamp_closed_app.global::<Editor>().set_timestamp_open(false);
+        let Some(app) = timestamp_closed_app.upgrade() else {
+            return;
+        };
+        app.global::<Editor>().set_timestamp_open(false);
     }));
-    let timestamp_script_app = app.clone();
+    let timestamp_script_app = app.as_weak();
     editor.on_timestamp_script_edited(on_window!(|state, text: SharedString| {
-        let editor = timestamp_script_app.global::<Editor>();
+        let Some(app) = timestamp_script_app.upgrade() else {
+            return;
+        };
+        let editor = app.global::<Editor>();
         editor.set_timestamp_script(text);
         refresh_timestamp_validation(&state, &editor);
     }));
-    let timestamp_track_app = app.clone();
+    let timestamp_track_app = app.as_weak();
     editor.on_timestamp_track_changed(on_window!(|state, index: i32| {
-        let editor = timestamp_track_app.global::<Editor>();
+        let Some(app) = timestamp_track_app.upgrade() else {
+            return;
+        };
+        let editor = app.global::<Editor>();
         editor.set_timestamp_track(index);
         refresh_timestamp_validation(&state, &editor);
     }));
-    let timestamp_motion_app = app.clone();
+    let timestamp_motion_app = app.as_weak();
     editor.on_timestamp_motion_changed(on_window!(|state, index: i32| {
-        let editor = timestamp_motion_app.global::<Editor>();
+        let Some(app) = timestamp_motion_app.upgrade() else {
+            return;
+        };
+        let editor = app.global::<Editor>();
         editor.set_timestamp_motion(index);
         refresh_timestamp_validation(&state, &editor);
     }));
-    let timestamp_apply_app = app.clone();
+    let timestamp_apply_app = app.as_weak();
     editor.on_timestamp_apply(on_window!(|state| {
-        let editor = timestamp_apply_app.global::<Editor>();
+        let Some(app) = timestamp_apply_app.upgrade() else {
+            return;
+        };
+        let editor = app.global::<Editor>();
         refresh_timestamp_validation(&state, &editor);
         if !editor.get_timestamp_can_apply() {
             return;
