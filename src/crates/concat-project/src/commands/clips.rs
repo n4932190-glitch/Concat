@@ -54,14 +54,15 @@ pub(super) fn apply(
                         ),
                     });
                 }
-                if let Some((previous_index, _)) = placements
-                    .iter()
-                    .enumerate()
-                    .take(index)
-                    .find(|(_, previous)| {
-                        placement.start < previous.start + previous.duration
-                            && previous.start < placement.start + placement.duration
-                    })
+                if let Some((previous_index, _)) =
+                    placements
+                        .iter()
+                        .enumerate()
+                        .take(index)
+                        .find(|(_, previous)| {
+                            placement.start < previous.start + previous.duration
+                                && previous.start < placement.start + placement.duration
+                        })
                 {
                     return Err(CommandError::InvalidTimestampScript {
                         reason: format!(
