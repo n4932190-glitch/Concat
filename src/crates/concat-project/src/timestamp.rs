@@ -3,8 +3,8 @@
 
 //! Timestamp scripts for placing stills and video clips on a timeline.
 //!
-//! One row is `HH:MM:SS - HH:MM:SS | media label`. Labels may be a
-//! bin item's name/path, or a one-based ordinal such as `Image 3`.
+//! One row is \`HH:MM:SS - HH:MM:SS | media label\`. Labels may be a
+//! bin item's name/path, or a one-based ordinal such as \`Image 3\`.
 
 use thiserror::Error;
 
@@ -60,9 +60,9 @@ pub struct TimestampScriptError {
     pub reason: String,
 }
 
-/// Parse timestamp lines such as `00:00:00 - 00:00:05 | Image 1`.
-/// Blank lines and lines beginning with `#` are ignored. Both a hyphen
-/// separator and SubRip's `-->` separator are accepted.
+/// Parse timestamp lines such as \`00:00:00 - 00:00:05 | Image 1\`.
+/// Blank lines and lines beginning with \`#\` are ignored. Both a hyphen
+/// separator and SubRip's \`-->\` separator are accepted.
 pub fn parse_script(text: &str) -> Result<Vec<ScriptEntry>, TimestampScriptError> {
     let text = text.strip_prefix('\u{feff}').unwrap_or(text);
     let mut entries = Vec::new();
@@ -74,17 +74,20 @@ pub fn parse_script(text: &str) -> Result<Vec<ScriptEntry>, TimestampScriptError
             continue;
         }
 
-        let (timing, label) = line.split_once('|').ok_or_else(|| error(
-            line_number,
-            "expected 'start - end | media name'",
-        ))?;
+        let (timing, label) = line
+            .split_once('|')
+            .ok_or_else(|| error(line_number, "expected 'start - end | media name'"))?;
         let label = label.trim();
         if label.is_empty() {
             return Err(error(line_number, "media name is empty"));
         }
 
-        let (start_text, end_text) = split_range(timing)
-            .ok_or_else(|| error(line_number, "expected a start and end timestamp separated by '-' or '-->'"))?;
+        let (start_text, end_text) = split_range(timing).ok_or_else(|| {
+            error(
+                line_number,
+                "expected a start and end timestamp separated by '-' or '-->'",
+            )
+        })?;
         let start = parse_time(start_text.trim())
             .ok_or_else(|| error(line_number, "invalid start time; use HH:MM:SS or HH:MM:SS.mmm"))?;
         let end = parse_time(end_text.trim())
@@ -93,7 +96,10 @@ pub fn parse_script(text: &str) -> Result<Vec<ScriptEntry>, TimestampScriptError
             return Err(error(line_number, "end time must be later than start time"));
         }
         if end - start < 1.0 / 60.0 {
-            return Err(error(line_number, "duration must be at least one frame (1/60 second)"));
+            return Err(error(
+                line_number,
+                "duration must be at least one frame (1/60 second)",
+            ));
         }
         if end > 360_000.0 {
             return Err(error(line_number, "timestamp exceeds the 100-hour project limit"));
@@ -123,23 +129,33 @@ pub fn resolve(
     entries
         .iter()
         .map(|entry| {
-            let media = find_media(&entry.label, project).ok_or_else(|| {
-                error(entry.line, &format!("no media item matches '{}'", entry.label))
-            })?;
+            let media = find_media(&entry.label, project)
+                .ok_or_else(|| error(entry.line, &format!("no media item matches '{}'", entry.label)))?;
             if media.kind == MediaKind::Audio {
-                return Err(error(entry.line, "audio-only media cannot be placed as a picture"));
+                return Err(error(
+                    entry.line,
+                    "audio-only media cannot be placed as a picture",
+                ));
             }
 
             let duration = entry.end - entry.start;
             let speed = match media.kind {
                 MediaKind::Image => 1.0,
                 MediaKind::Video => {
-                    let source = media.duration.filter(|value| value.is_finite() && *value > 0.0)
-                        .ok_or_else(|| error(
-                            entry.line,
-                            "video duration is unavailable; re-import the media so Concat can probe its duration",
-                        ))?;
-                    if source < duration { source / duration } else { 1.0 }
+                    let source = media
+                        .duration
+                        .filter(|value| value.is_finite() && *value > 0.0)
+                        .ok_or_else(|| {
+                            error(
+                                entry.line,
+                                "video duration is unavailable; re-import the media so Concat can probe its duration",
+                            )
+                        })?;
+                    if source < duration {
+                        source / duration
+                    } else {
+                        1.0
+                    }
                 }
                 MediaKind::Audio => unreachable!(),
             };
@@ -156,7 +172,9 @@ pub fn resolve(
                 start: entry.start,
                 duration,
                 speed,
-                motion: if media.kind == MediaKind::Image { motion } else {
+                motion: if media.kind == MediaKind::Image {
+                    motion
+                } else {
                     match motion {
                         AutoMotion::ZoomIn | AutoMotion::ZoomOut => motion,
                         _ => AutoMotion::None,
@@ -172,18 +190,33 @@ fn find_media<'a>(label: &str, project: &'a Project) -> Option<&'a crate::model:
 
     // Human-friendly ordinal labels map to the media-bin order.
     if let Some((kind, ordinal)) = ordinal(label) {
-        return project.media.iter().filter(|item| item.kind == kind).nth(ordinal - 1);
+        return project
+            .media
+            .iter()
+            .filter(|item| item.kind == kind)
+            .nth(ordinal - 1);
     }
 
     let wanted = label.to_ascii_lowercase();
-    let matches: Vec<_> = project.media.iter().filter(|item| {
-        let name = item.name.to_ascii_lowercase();
-        let path_name = basename(&item.path).to_ascii_lowercase();
-        let path_stem = path_name.rsplit_once('.').map(|(stem, _)| stem).unwrap_or(&path_name);
-        name == wanted || path_name == wanted || path_stem == wanted
-    }).collect();
+    let matches: Vec<_> = project
+        .media
+        .iter()
+        .filter(|item| {
+            let name = item.name.to_ascii_lowercase();
+            let path_name = basename(&item.path).to_ascii_lowercase();
+            let path_stem = path_name
+                .rsplit_once('.')
+                .map(|(stem, _)| stem)
+                .unwrap_or(&path_name);
+            name == wanted || path_name == wanted || path_stem == wanted
+        })
+        .collect();
 
-    if matches.len() == 1 { matches.first().copied() } else { None }
+    if matches.len() == 1 {
+        matches.first().copied()
+    } else {
+        None
+    }
 }
 
 fn ordinal(label: &str) -> Option<(MediaKind, usize)> {
@@ -211,8 +244,13 @@ fn split_range(text: &str) -> Option<(&str, &str)> {
 
 fn parse_time(text: &str) -> Option<f64> {
     let (clock, fraction) = match text.split_once(['.', ',']) {
-        Some((clock, fraction)) if !fraction.is_empty() && fraction.len() <= 3
-            && fraction.bytes().all(|byte| byte.is_ascii_digit()) => (clock, Some(fraction)),
+        Some((clock, fraction))
+            if !fraction.is_empty()
+                && fraction.len() <= 3
+                && fraction.bytes().all(|byte| byte.is_ascii_digit()) =>
+        {
+            (clock, Some(fraction))
+        }
         Some(_) => return None,
         None => (text, None),
     };
@@ -236,27 +274,54 @@ fn parse_time(text: &str) -> Option<f64> {
 }
 
 fn error(line: usize, reason: &str) -> TimestampScriptError {
-    TimestampScriptError { line, reason: reason.to_owned() }
+    TimestampScriptError {
+        line,
+        reason: reason.to_owned(),
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::model::{MediaItem, Timeline, VideoSettings, Track};
     use std::sync::Arc;
+
+    use super::*;
+    use crate::model::{MediaItem, Timeline, Track, VideoSettings};
 
     fn project() -> Project {
         let mut project = Project::new();
         project.media = vec![
-            MediaItem { id: "m1".into(), name: "portrait.png".into(), path: "/media/portrait.png".into(), kind: MediaKind::Image, ..MediaItem::default() },
-            MediaItem { id: "m2".into(), name: "short.mp4".into(), path: "/media/short.mp4".into(), kind: MediaKind::Video, duration: Some(2.0), ..MediaItem::default() },
-            MediaItem { id: "m3".into(), name: "long.mp4".into(), path: "/media/long.mp4".into(), kind: MediaKind::Video, duration: Some(8.0), ..MediaItem::default() },
+            MediaItem {
+                id: "m1".into(),
+                name: "portrait.png".into(),
+                path: "/media/portrait.png".into(),
+                kind: MediaKind::Image,
+                ..MediaItem::default()
+            },
+            MediaItem {
+                id: "m2".into(),
+                name: "short.mp4".into(),
+                path: "/media/short.mp4".into(),
+                kind: MediaKind::Video,
+                duration: Some(2.0),
+                ..MediaItem::default()
+            },
+            MediaItem {
+                id: "m3".into(),
+                name: "long.mp4".into(),
+                path: "/media/long.mp4".into(),
+                kind: MediaKind::Video,
+                duration: Some(8.0),
+                ..MediaItem::default()
+            },
         ];
         project.timelines = vec![Arc::new(Timeline {
             id: "TL1".into(),
             name: "Timeline 1".into(),
             video: VideoSettings::default(),
-            tracks: vec![Track { id: "T1".into(), ..Track::default() }],
+            tracks: vec![Track {
+                id: "T1".into(),
+                ..Track::default()
+            }],
             ..Timeline::default()
         })];
         project
@@ -266,7 +331,8 @@ mod tests {
     fn parses_simple_and_subrip_style_ranges() {
         let rows = parse_script(
             "00:00:00 - 00:00:05 | Image 1\n00:00:05.5 --> 00:00:08.000 | short.mp4",
-        ).unwrap();
+        )
+        .unwrap();
         assert_eq!(rows.len(), 2);
         assert_eq!((rows[0].start, rows[0].end), (0.0, 5.0));
         assert_eq!((rows[1].start, rows[1].end), (5.5, 8.0));
@@ -278,7 +344,8 @@ mod tests {
         let project = project();
         let entries = parse_script(
             "00:00:00 - 00:00:03 | short.mp4\n00:00:03 - 00:00:06 | long.mp4",
-        ).unwrap();
+        )
+        .unwrap();
         let plan = resolve(&entries, &project, AutoMotion::None).unwrap();
         assert!((plan[0].speed - (2.0 / 3.0)).abs() < 1e-9);
         assert_eq!(plan[0].duration, 3.0);
@@ -302,11 +369,14 @@ mod tests {
 
         let mut editor = Editor::new();
         editor.project_mut().media = project().media;
-        editor.apply(Command::PlaceTimestampScript {
-            script: "00:00:00 - 00:00:03 | short.mp4\n00:00:03 - 00:00:06 | long.mp4".into(),
-            track_id: "T1".into(),
-            motion: AutoMotion::ZoomIn,
-        }).unwrap();
+        editor
+            .apply(Command::PlaceTimestampScript {
+                script:
+                    "00:00:00 - 00:00:03 | short.mp4\n00:00:03 - 00:00:06 | long.mp4".into(),
+                track_id: "T1".into(),
+                motion: AutoMotion::ZoomIn,
+            })
+            .unwrap();
 
         let timeline = editor.project().active();
         assert_eq!(timeline.clips.len(), 2);
@@ -317,7 +387,10 @@ mod tests {
         assert_eq!(timeline.clips[1].duration, 3.0);
         assert_eq!(timeline.clips[1].speed, 1.0);
         assert_eq!(timeline.clips[0].keys.len(), 2);
-        assert_eq!(timeline.clips[0].keys[0].property, crate::model::KeyProperty::Scale);
+        assert_eq!(
+            timeline.clips[0].keys[0].property,
+            crate::model::KeyProperty::Scale
+        );
     }
 
     #[test]
@@ -328,7 +401,8 @@ mod tests {
         let mut editor = Editor::new();
         editor.project_mut().media = project().media;
         let result = editor.apply(Command::PlaceTimestampScript {
-            script: "00:00:00 - 00:00:03 | short.mp4\n00:00:03 - 00:00:05 | absent.mp4".into(),
+            script:
+                "00:00:00 - 00:00:03 | short.mp4\n00:00:03 - 00:00:05 | absent.mp4".into(),
             track_id: "T1".into(),
             motion: AutoMotion::None,
         });
@@ -344,7 +418,8 @@ mod tests {
         let mut editor = Editor::new();
         editor.project_mut().media = project().media;
         let result = editor.apply(Command::PlaceTimestampScript {
-            script: "00:00:00 - 00:00:03 | short.mp4\n00:00:02 - 00:00:05 | long.mp4".into(),
+            script:
+                "00:00:00 - 00:00:03 | short.mp4\n00:00:02 - 00:00:05 | long.mp4".into(),
             track_id: "T1".into(),
             motion: AutoMotion::None,
         });

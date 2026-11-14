@@ -26,11 +26,11 @@ pub(super) fn apply(
                     reason: error.to_string(),
                 }
             })?;
-            let placements = crate::timestamp::resolve(&entries, project, motion).map_err(|error| {
-                CommandError::InvalidTimestampScript {
+            let placements = crate::timestamp::resolve(&entries, project, motion).map_err(
+                |error| CommandError::InvalidTimestampScript {
                     reason: error.to_string(),
-                }
-            })?;
+                },
+            )?;
             let active = project.active();
             if active.track(&track_id).is_none() {
                 return Err(CommandError::TrackGone);
@@ -87,12 +87,7 @@ pub(super) fn apply(
             let mut created = None;
             for (placement, media) in placements.iter().zip(items.iter()) {
                 let id = mint.next("c");
-                let mut clip = default_clip(
-                    id.clone(),
-                    track_id.clone(),
-                    media,
-                    placement.start,
-                );
+                let mut clip = default_clip(id.clone(), track_id.clone(), media, placement.start);
                 // A shorter source is slowed to preserve every source frame;
                 // a longer one remains at 1x and is cut at the requested end.
                 clip.duration = placement.duration;
