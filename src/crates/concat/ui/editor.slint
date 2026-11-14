@@ -335,6 +335,15 @@ export global Editor {
     // ── the timeline ──
     in-out property <[TimelineTabData]> timeline-tabs;
     in-out property <int> timeline-current-tab;
+    /// Timestamp script importer and its live timeline preflight report.
+    in-out property <bool> timestamp-open: false;
+    in-out property <string> timestamp-script: "";
+    in-out property <string> timestamp-validation: "Paste timestamp rows to validate media and timeline placement.";
+    in-out property <[string]> timestamp-tracks;
+    in-out property <int> timestamp-track: 0;
+    in-out property <int> timestamp-motion: 0;
+    in-out property <int> timestamp-row-count: 0;
+    in-out property <bool> timestamp-can-apply: false;
     in-out property <[TrackData]> tracks;
     in-out property <[ClipData]> clips;
     in-out property <TimelineTool> tool;
@@ -394,6 +403,12 @@ export global Editor {
     callback tab-renamed(index: int, name: string);
     callback tab-close-requested(index: int);
     callback tab-added();
+    callback timestamp-opened();
+    callback timestamp-closed();
+    callback timestamp-script-edited(text: string);
+    callback timestamp-track-changed(index: int);
+    callback timestamp-motion-changed(index: int);
+    callback timestamp-apply();
     callback tool-changed(tool: TimelineTool);
     callback snap-changed(snap: bool);
     callback magnetic-changed(on: bool);

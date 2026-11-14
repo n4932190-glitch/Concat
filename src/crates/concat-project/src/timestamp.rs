@@ -135,7 +135,10 @@ pub fn resolve(
                 MediaKind::Image => 1.0,
                 MediaKind::Video => {
                     let source = media.duration.filter(|value| value.is_finite() && *value > 0.0)
-                        .unwrap_or(5.0);
+                        .ok_or_else(|| error(
+                            entry.line,
+                            "video duration is unavailable; re-import the media so Concat can probe its duration",
+                        ))?;
                     if source < duration { source / duration } else { 1.0 }
                 }
                 MediaKind::Audio => unreachable!(),
@@ -347,6 +350,15 @@ mod tests {
         });
         assert!(result.is_err());
         assert!(editor.project().active().clips.is_empty());
+    }
+
+    #[test]
+    fn video_without_a_probed_duration_is_not_guessed() {
+        let mut project = project();
+        project.media[1].duration = None;
+        let entries = parse_script("00:00:00 - 00:00:03 | short.mp4").unwrap();
+        let error = resolve(&entries, &project, AutoMotion::None).unwrap_err();
+        assert!(error.reason.contains("duration is unavailable"));
     }
 
     #[test]

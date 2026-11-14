@@ -1,0 +1,185 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Jareer Abdullah and Concat contributors
+
+import { I18n } from "../i18n.slint";
+import { Theme } from "../theme/theme.slint";
+import { Glyph } from "../icons.slint";
+import { Button, DialogRow, DialogSection, Modal } from "../primitives/modal.slint";
+import { Select } from "../primitives/select.slint";
+import { ResizeBox } from "../primitives/resize-box.slint";
+
+// The timestamp importer keeps the script editable while validating it against
+// the current project. Rust owns parsing, media matching and timeline checks;
+// this component only shows the result and submits the exact text.
+export component TimestampForm inherits VerticalLayout {
+    in property <string> script;
+    in property <string> validation;
+    in property <[string]> tracks;
+    in property <int> track;
+    in property <int> motion;
+    in property <int> row-count;
+    in property <bool> can-apply;
+
+    callback script-edited(text: string);
+    callback track-changed(index: int);
+    callback motion-changed(index: int);
+    callback apply();
+
+    property <string> draft;
+    property <bool> typing;
+
+    changed script => {
+        if (!root.typing) {
+            root.draft = root.script;
+        }
+    }
+    init => { root.draft = root.script; }
+
+    DialogSection {
+        first: true;
+        title: "Timeline target";
+
+        DialogRow {
+            label: "Picture track";
+            Select {
+                options: root.tracks;
+                current: root.track;
+                placeholder: "No picture track available";
+                enabled: root.tracks.length > 0;
+                changed(index) => { root.track-changed(index); }
+            }
+        }
+
+        DialogRow {
+            label: "Automatic motion";
+            Select {
+                options: ["None", "Zoom In", "Zoom Out", "Vertical Scroll"];
+                current: root.motion;
+                changed(index) => { root.motion-changed(index); }
+            }
+        }
+    }
+
+    DialogSection {
+        title: "Timestamp script";
+
+        script-box := ResizeBox {
+            content-height: script-input.preferred-height;
+            focused: script-input.has-focus;
+
+            script-input := TextInput {
+                y: script-box.pad-y;
+                width: parent.width;
+                height: Math.max(self.preferred-height, script-box.view-height);
+                text <=> root.draft;
+                color: Theme.fg;
+                font-size: Theme.fs;
+                single-line: false;
+                wrap: word-wrap;
+                selection-background-color: Theme.accent;
+                selection-foreground-color: Theme.on-accent;
+                changed has-focus => { root.typing = self.has-focus; }
+                edited => { root.script-edited(self.text); }
+            }
+
+            if root.draft == "" && !script-input.has-focus: Text {
+                x: 0;
+                y: script-box.pad-y;
+                text: "00:00:00 - 00:00:05 | Image 1\n00:00:05 - 00:00:09 | Image 2";
+                color: Theme.fg-dim;
+                font-size: Theme.fs;
+                wrap: word-wrap;
+            }
+        }
+
+        Text {
+            text: "One row per clip: HH:MM:SS - HH:MM:SS | Image 1. Milliseconds and SRT arrows are also accepted.";
+            color: Theme.fg-muted;
+            font-size: Theme.fs-sm;
+            wrap: word-wrap;
+        }
+    }
+
+    DialogSection {
+        title: "Timeline validation";
+
+        Rectangle {
+            width: parent.width;
+            border-radius: Theme.r;
+            background: Theme.field;
+
+            VerticalLayout {
+                padding: 10px;
+                spacing: 5px;
+
+                Text {
+                    text: root.can-apply
+                        ? "\{root.row-count} rows ready to place"
+                        : "Not ready to place";
+                    color: Theme.fg;
+                    font-size: Theme.fs;
+                    font-weight: 600;
+                }
+
+                Text {
+                    text: root.validation;
+                    color: Theme.fg-muted;
+                    font-size: Theme.fs-sm;
+                    wrap: word-wrap;
+                }
+            }
+        }
+    }
+
+    VerticalLayout {
+        padding: 14px;
+        spacing: 8px;
+
+        Button {
+            block: true;
+            primary: true;
+            large: true;
+            glyph: Glyph.clock;
+            label: "Place on timeline";
+            enabled: root.can-apply;
+            clicked => { root.apply(); }
+        }
+    }
+}
+
+export component TimestampDialog inherits Modal {
+    in property <bool> opened;
+    in property <string> script;
+    in property <string> validation;
+    in property <[string]> tracks;
+    in property <int> track;
+    in property <int> motion;
+    in property <int> row-count;
+    in property <bool> can-apply;
+
+    callback script-edited(text: string);
+    callback track-changed(index: int);
+    callback motion-changed(index: int);
+    callback apply();
+
+    open: root.opened;
+    title: "Timestamp script";
+    glyph: Glyph.clock;
+    surface-width: 560px;
+    dismissable: true;
+
+    TimestampForm {
+        script: root.script;
+        validation: root.validation;
+        tracks: root.tracks;
+        track: root.track;
+        motion: root.motion;
+        row-count: root.row-count;
+        can-apply: root.can-apply;
+
+        script-edited(text) => { root.script-edited(text); }
+        track-changed(index) => { root.track-changed(index); }
+        motion-changed(index) => { root.motion-changed(index); }
+        apply => { root.apply(); }
+    }
+}

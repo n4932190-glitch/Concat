@@ -100,6 +100,7 @@ mod wayland_drop {
     }
 }
 
+use concat_project::timestamp::AutoMotion;
 use dock::{Dock, SEAT_MIN_GRAB, SEAT_MIN_H, SEAT_MIN_W};
 use host::{Host, Shell};
 use panes::Msg;
@@ -178,6 +179,90 @@ pub fn report_startup_failure(error: &slint::PlatformError) {
     // "could not start" right after the topic: the smoke scripts look for it.
     log::error!("start: could not start the window: {error}; Concat says so in a dialog and quits");
     platform::report_startup_failure(&error);
+}
+
+
+/// The automatic movement selected in the timestamp importer.
+fn timestamp_motion(index: i32) -> AutoMotion {
+    match index {
+        1 => AutoMotion::ZoomIn,
+        2 => AutoMotion::ZoomOut,
+        3 => AutoMotion::VerticalScroll,
+        _ => AutoMotion::None,
+    }
+}
+
+/// Re-validates the pasted script against the live project without editing it.
+fn refresh_timestamp_validation(state: &Studio, editor: &Editor) {
+    let script = editor.get_timestamp_script().to_string();
+    let track_index = editor.get_timestamp_track();
+    let motion = timestamp_motion(editor.get_timestamp_motion());
+
+    let checked: Result<usize, String> = (|| {
+        let entries = concat_project::timestamp::parse_script(&script)
+            .map_err(|error| error.to_string())?;
+        let track = state
+            .timeline()
+            .tracks
+            .iter()
+            .rev()
+            .nth(track_index.max(0) as usize)
+            .ok_or_else(|| "Choose an available picture track.".to_owned())?;
+        let track_id = track.id.clone();
+        if state.locked(&track_id) {
+            return Err("The selected track is locked. Unlock it before placing clips.".to_owned());
+        }
+
+        let placements = concat_project::timestamp::resolve(&entries, state.project(), motion)
+            .map_err(|error| error.to_string())?;
+
+        for (index, placement) in placements.iter().enumerate() {
+            if let Some(existing) = state.timeline().clips.iter().find(|clip| {
+                clip.track_id == track_id
+                    && placement.start < clip.start + clip.duration
+                    && clip.start < placement.start + placement.duration
+            }) {
+                return Err(format!(
+                    "Line {} overlaps existing clip '{}'. Choose an empty track or move that clip first.",
+                    entries[index].line,
+                    existing.name
+                ));
+            }
+
+            if let Some((other_index, _)) = placements
+                .iter()
+                .enumerate()
+                .take(index)
+                .find(|(_, previous)| {
+                    placement.start < previous.start + previous.duration
+                        && previous.start < placement.start + placement.duration
+                })
+            {
+                return Err(format!(
+                    "Line {} overlaps line {} in the pasted script.",
+                    entries[index].line,
+                    entries[other_index].line
+                ));
+            }
+        }
+
+        Ok(entries.len())
+    })();
+
+    match checked {
+        Ok(rows) => {
+            editor.set_timestamp_row_count(rows as i32);
+            editor.set_timestamp_validation(
+                "All media references resolve. No overlaps were found on the selected track.".into(),
+            );
+            editor.set_timestamp_can_apply(true);
+        }
+        Err(reason) => {
+            editor.set_timestamp_row_count(0);
+            editor.set_timestamp_validation(reason.into());
+            editor.set_timestamp_can_apply(false);
+        }
+    }
 }
 
 /// Builds the window, binds it to the engine, and runs it until it closes.
@@ -1197,6 +1282,73 @@ fn start(project: Option<std::path::PathBuf>, smoke: bool) -> Result<(), slint::
     }));
     editor.on_add_track(on_window!(|state, bottom: bool| {
         state.apply(concat_project::Command::AddTrack { bottom });
+    }));
+    editor.on_timestamp_opened(on_window!(|state| {
+        let editor = app.global::<Editor>();
+        let tracks: Vec<SharedString> = state
+            .timeline()
+            .tracks
+            .iter()
+            .rev()
+            .enumerate()
+            .map(|(index, _)| format!("Track {}", index + 1).into())
+            .collect();
+        editor.set_timestamp_script("".into());
+        editor.set_timestamp_tracks(ModelRc::from(VecModel::from(tracks)));
+        editor.set_timestamp_track(0);
+        editor.set_timestamp_motion(0);
+        editor.set_timestamp_row_count(0);
+        editor.set_timestamp_validation(
+            "Paste timestamp rows to validate media and timeline placement.".into(),
+        );
+        editor.set_timestamp_can_apply(false);
+        editor.set_timestamp_open(true);
+    }));
+    editor.on_timestamp_closed(on_window!(|_state| {
+        app.global::<Editor>().set_timestamp_open(false);
+    }));
+    editor.on_timestamp_script_edited(on_window!(|state, text: SharedString| {
+        let editor = app.global::<Editor>();
+        editor.set_timestamp_script(text);
+        refresh_timestamp_validation(state, &editor);
+    }));
+    editor.on_timestamp_track_changed(on_window!(|state, index: i32| {
+        let editor = app.global::<Editor>();
+        editor.set_timestamp_track(index);
+        refresh_timestamp_validation(state, &editor);
+    }));
+    editor.on_timestamp_motion_changed(on_window!(|state, index: i32| {
+        let editor = app.global::<Editor>();
+        editor.set_timestamp_motion(index);
+        refresh_timestamp_validation(state, &editor);
+    }));
+    editor.on_timestamp_apply(on_window!(|state| {
+        let editor = app.global::<Editor>();
+        refresh_timestamp_validation(state, &editor);
+        if !editor.get_timestamp_can_apply() {
+            return;
+        }
+        let Some(track) = state
+            .timeline()
+            .tracks
+            .iter()
+            .rev()
+            .nth(editor.get_timestamp_track().max(0) as usize)
+        else {
+            editor.set_timestamp_validation("Choose an available picture track.".into());
+            editor.set_timestamp_can_apply(false);
+            return;
+        };
+        let script = editor.get_timestamp_script().to_string();
+        let motion = timestamp_motion(editor.get_timestamp_motion());
+        let result = state.apply(concat_project::Command::PlaceTimestampScript {
+            script,
+            track_id: track.id.clone(),
+            motion,
+        });
+        if result.is_some() {
+            editor.set_timestamp_open(false);
+        }
     }));
     editor.on_delete_selected(on_window!(|state| {
         state.delete_selected();
