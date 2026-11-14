@@ -437,6 +437,42 @@ mod tests {
     }
 
     #[test]
+    fn video_stretch_beyond_sixteen_times_is_rejected() {
+        let mut project = project();
+        project.media[1].duration = Some(0.1);
+        let entries = parse_script("00:00:00 - 00:00:03 | short.mp4").unwrap();
+        let error = resolve(&entries, &project, AutoMotion::None).unwrap_err();
+        assert!(error.reason.contains("maximum slow-down is 16x"));
+    }
+
+    #[test]
+    fn vertical_scroll_writes_overscanned_offset_keys() {
+        use crate::commands::Command;
+        use crate::editor::Editor;
+        use crate::model::KeyProperty;
+
+        let mut editor = Editor::new();
+        editor.project_mut().media = project().media;
+        editor
+            .apply(Command::PlaceTimestampScript {
+                script: "00:00:00 - 00:00:04 | Image 1".into(),
+                track_id: "T1".into(),
+                motion: AutoMotion::VerticalScroll,
+            })
+            .unwrap();
+
+        let clip = &editor.project().active().clips[0];
+        assert_eq!(clip.scale, 1.25);
+        assert_eq!(clip.keys.len(), 2);
+        assert_eq!(clip.keys[0].property, KeyProperty::OffsetY);
+        assert_eq!(clip.keys[0].at, 0.0);
+        assert_eq!(clip.keys[0].value, 0.35);
+        assert_eq!(clip.keys[1].property, KeyProperty::OffsetY);
+        assert_eq!(clip.keys[1].at, 1.0);
+        assert_eq!(clip.keys[1].value, -0.35);
+    }
+
+    #[test]
     fn rejects_missing_labels_and_non_positive_spans() {
         assert!(parse_script("00:00:01 - 00:00:01 | Image 1").is_err());
         let project = project();
