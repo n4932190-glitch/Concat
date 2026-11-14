@@ -470,10 +470,10 @@ mod tests {
         assert_eq!(clip.keys.len(), 2);
         assert_eq!(clip.keys[0].property, KeyProperty::OffsetY);
         assert_eq!(clip.keys[0].at, 0.0);
-        assert_eq!(clip.keys[0].value, 0.35);
+        assert_eq!(clip.keys[0].value, 0.10);
         assert_eq!(clip.keys[1].property, KeyProperty::OffsetY);
         assert_eq!(clip.keys[1].at, 1.0);
-        assert_eq!(clip.keys[1].value, -0.35);
+        assert_eq!(clip.keys[1].value, -0.10);
     }
 
     #[test]

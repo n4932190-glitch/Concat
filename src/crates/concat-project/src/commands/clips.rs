@@ -1046,11 +1046,11 @@ fn apply_timestamp_motion(clip: &mut Clip, motion: crate::timestamp::AutoMotion)
             timestamp_key(clip, KeyProperty::Scale, 1.0, 1.0);
         }
         AutoMotion::VerticalScroll => {
-            // Overscan gives a portrait still room to travel without exposing
-            // the canvas at either end of the pan.
+            // At 1.25x scale, ±0.10 frame heights stays inside the
+            // available 0.125 overscan, avoiding black edges at either end.
             clip.scale = 1.25;
-            timestamp_key(clip, KeyProperty::OffsetY, 0.0, 0.35);
-            timestamp_key(clip, KeyProperty::OffsetY, 1.0, -0.35);
+            timestamp_key(clip, KeyProperty::OffsetY, 0.0, 0.10);
+            timestamp_key(clip, KeyProperty::OffsetY, 1.0, -0.10);
         }
     }
 }
