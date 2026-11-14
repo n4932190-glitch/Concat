@@ -16,6 +16,94 @@ pub(super) fn apply(
     command: Command,
 ) -> Result<Outcome, CommandError> {
     match command {
+        Command::PlaceTimestampScript {
+            script,
+            track_id,
+            motion,
+        } => {
+            let entries = crate::timestamp::parse_script(&script).map_err(|error| {
+                CommandError::InvalidTimestampScript {
+                    reason: error.to_string(),
+                }
+            })?;
+            let placements =
+                crate::timestamp::resolve(&entries, project, motion).map_err(|error| {
+                    CommandError::InvalidTimestampScript {
+                        reason: error.to_string(),
+                    }
+                })?;
+            let active = project.active();
+            if active.track(&track_id).is_none() {
+                return Err(CommandError::TrackGone);
+            }
+
+            // A script is a sequential picture run on one lane. Refuse
+            // overlaps rather than silently covering an existing shot or
+            // allowing two script rows to compete for the same frames.
+            for (index, placement) in placements.iter().enumerate() {
+                let entry = &entries[index];
+                if let Some(existing) = active.clips.iter().find(|clip| {
+                    clip.track_id == track_id
+                        && placement.start < clip.start + clip.duration
+                        && clip.start < placement.start + placement.duration
+                }) {
+                    return Err(CommandError::InvalidTimestampScript {
+                        reason: format!(
+                            "line {}: overlaps existing clip '{}'; choose an empty picture lane or move that clip first",
+                            entry.line, existing.name
+                        ),
+                    });
+                }
+                if let Some((previous_index, _)) =
+                    placements
+                        .iter()
+                        .enumerate()
+                        .take(index)
+                        .find(|(_, previous)| {
+                            placement.start < previous.start + previous.duration
+                                && previous.start < placement.start + placement.duration
+                        })
+                {
+                    return Err(CommandError::InvalidTimestampScript {
+                        reason: format!(
+                            "line {}: overlaps line {} in the pasted script",
+                            entry.line, entries[previous_index].line
+                        ),
+                    });
+                }
+            }
+
+            // Resolve every media item before borrowing the timeline mutably:
+            // a missing item must not leave a half-placed script behind.
+            let items = placements
+                .iter()
+                .map(|placement| {
+                    project
+                        .media_by_id(&placement.media_id)
+                        .cloned()
+                        .ok_or(CommandError::MediaGone)
+                })
+                .collect::<Result<Vec<_>, _>>()?;
+
+            let timeline = project.active_mut();
+            let mut created = None;
+            for (placement, media) in placements.iter().zip(items.iter()) {
+                let id = mint.next("c");
+                let mut clip = default_clip(id.clone(), track_id.clone(), media, placement.start);
+                // A shorter source is slowed to preserve every source frame;
+                // a longer one remains at 1x and is cut at the requested end.
+                clip.duration = placement.duration;
+                clip.speed = placement.speed;
+                apply_timestamp_motion(&mut clip, placement.motion);
+                timeline.clips.push(Arc::new(clip));
+                created = Some(id);
+            }
+            Ok(Outcome {
+                created_id: created,
+                applied: true,
+            })
+        }
+
         Command::AddClip {
             media_id,
             track_id,
@@ -944,6 +1032,38 @@ pub(crate) fn follow_main(timeline: &mut Timeline, main: Option<&str>, lane: &st
             }
         }
     }
+}
+
+fn apply_timestamp_motion(clip: &mut Clip, motion: crate::timestamp::AutoMotion) {
+    use crate::timestamp::AutoMotion;
+
+    match motion {
+        AutoMotion::None => {}
+        AutoMotion::ZoomIn => {
+            timestamp_key(clip, KeyProperty::Scale, 0.0, 1.0);
+            timestamp_key(clip, KeyProperty::Scale, 1.0, 1.25);
+        }
+        AutoMotion::ZoomOut => {
+            timestamp_key(clip, KeyProperty::Scale, 0.0, 1.25);
+            timestamp_key(clip, KeyProperty::Scale, 1.0, 1.0);
+        }
+        AutoMotion::VerticalScroll => {
+            // At 1.25x scale, ±0.10 frame heights stays inside the
+            // available 0.125 overscan, avoiding black edges at either end.
+            clip.scale = 1.25;
+            timestamp_key(clip, KeyProperty::OffsetY, 0.0, 0.10);
+            timestamp_key(clip, KeyProperty::OffsetY, 1.0, -0.10);
+        }
+    }
+}
+
+fn timestamp_key(clip: &mut Clip, property: KeyProperty, at: f64, value: f64) {
+    clip.keys.push(ClipKey {
+        property,
+        at,
+        value,
+        ease: KeyEase::LINEAR,
+    });
 }
 
 fn default_clip(id: String, track_id: String, media: &MediaItem, start: f64) -> Clip {

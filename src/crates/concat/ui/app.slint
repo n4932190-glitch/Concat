@@ -51,6 +51,7 @@ import {
 } from "dialogs/relink.slint";
 import { ConfirmData, ConfirmDialog } from "dialogs/confirm.slint";
 import { CaptionsDialog, CaptionsSheetData } from "dialogs/captions.slint";
+import { TimestampDialog } from "dialogs/timestamp.slint";
 import { SpeechDialog, SpeechSheetData } from "dialogs/speech.slint";
 import { NewVoiceData, NewVoiceDialog } from "dialogs/new-voice.slint";
 import { AvatarData } from "primitives/avatar.slint";
@@ -240,7 +241,7 @@ export component App inherits Window {
     }
     property <bool> sheet-open: root.export.open || root.settings.open
         || root.project-sheet.open || root.captions.open || root.speech.open
-        || root.start.composing || root.new-voice.open;
+        || Editor.timestamp-open || root.start.composing || root.new-voice.open;
     changed sheet-open => {
         if (!root.sheet-open) {
             keys.focus();
@@ -326,7 +327,7 @@ export component App inherits Window {
     /// then, and nothing that acts on what the sheet covers.
     property <bool> sheet-up: root.start.composing || root.export.open || root.settings.open
         || root.project-sheet.open || root.new-voice.open || root.relink.open
-        || root.confirm.open;
+        || root.confirm.open || Editor.timestamp-open;
     /// Which floating tool card is in front: "captions" or "speech". The
     /// one opened or grabbed last; Escape closes it first.
     property <string> front-tool: "captions";
@@ -1168,6 +1169,33 @@ export component App inherits Window {
     // for. Only its card takes events, so covering the window costs the
     // window nothing; and it is under the tooltip layer so the card's own
     // close button can be named over it.
+    TimestampDialog {
+        fill: root.sheets-fill;
+        floating: false;
+        inset-top: root.safe-area-insets.top;
+        inset-bottom: root.safe-area-insets.bottom;
+        inset-left: root.safe-area-insets.left;
+        inset-right: root.safe-area-insets.right;
+        x: 0;
+        y: 0;
+        width: root.width;
+        height: root.height;
+        opened: Editor.timestamp-open;
+        script: Editor.timestamp-script;
+        validation: Editor.timestamp-validation;
+        tracks: Editor.timestamp-tracks;
+        track: Editor.timestamp-track;
+        motion: Editor.timestamp-motion;
+        row-count: Editor.timestamp-row-count;
+        can-apply: Editor.timestamp-can-apply;
+
+        closed => { Editor.timestamp-closed(); }
+        script-edited(text) => { Editor.timestamp-script-edited(text); }
+        track-changed(index) => { Editor.timestamp-track-changed(index); }
+        motion-changed(index) => { Editor.timestamp-motion-changed(index); }
+        apply => { Editor.timestamp-apply(); }
+    }
+
     ToastLayer {
         x: 0;
         y: 0;

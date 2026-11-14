@@ -413,6 +413,19 @@ export component TimelineTray inherits Rectangle {
         Divider { }
 
         TrayButton {
+            glyph: Glyph.clock;
+            label: I18n.t("timestamp.title");
+            icon-size: 16px;
+            checked: Editor.timestamp-open;
+            clicked => {
+                if (Editor.timestamp-open) {
+                    Editor.timestamp-closed();
+                } else {
+                    Editor.timestamp-opened();
+                }
+            }
+        }
+        TrayButton {
             glyph: Glyph.text-mark;
             label: I18n.t("tray.generateCaptions");
             icon-size: 16px;

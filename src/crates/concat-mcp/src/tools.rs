@@ -276,6 +276,12 @@ pub fn catalogue() -> Vec<Tool> {
             Summary,
         ),
         command(
+            "timestamp_script",
+            "Place timestamped media",
+            "Pastes a timestamp script into the active timeline. Each non-empty row is `HH:MM:SS - HH:MM:SS | media label` (also accepts SubRip-style `-->`). The label must match a media-bin name/path or use a one-based ordinal such as `Image 1` or `Video 2`. Supply `trackId` from `timeline_read`. A video longer than the span is trimmed at the tail; a shorter video is slowed down (at most 16x) to fill it; stills receive the exact span. Optional `motion`: `none`, `zoom-in`, `zoom-out` or `vertical-scroll` (the last applies to still images). The entire script is one undoable edit. Use `timeline_read` after placement to inspect every clip's start, duration and speed.",
+            "placeTimestampScript",
+        ),
+        command(
             "clip_add",
             "Place a clip",
             "Places a clip of a media item (`mediaId`, from the bin) on a lane (`trackId`, from `timeline_read`) starting at `start` seconds. Its length is the media's (5 s for a still). `ripple: true` pushes later clips on that lane right instead of overlapping them. The new clip's id is `createdId`.",

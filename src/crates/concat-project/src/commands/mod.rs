@@ -13,11 +13,12 @@ use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 
 use crate::model::{
-    AppliedFilter, AudioTrack, Background, Clip, ClipKind, ClipMotion, ColorRange, ColorSpace,
-    Crop, CustomFont, Cutout, CutoutMode, Enhanced, Framing, KeyEase, KeyProperty, Mask, MediaItem,
-    MediaKind, MediaOrigin, Project, RunStyle, ShapeStyle, SpeedPoint, Stabilize, Stroke,
-    TextStyle, Timeline, Track, Transition, VideoSettings, VoiceMix,
+    AppliedFilter, AudioTrack, Background, Clip, ClipKey, ClipKind, ClipMotion, ColorRange,
+    ColorSpace, Crop, CustomFont, Cutout, CutoutMode, Enhanced, Framing, KeyEase, KeyProperty,
+    Mask, MediaItem, MediaKind, MediaOrigin, Project, RunStyle, ShapeStyle, SpeedPoint, Stabilize,
+    Stroke, TextStyle, Timeline, Track, Transition, VideoSettings, VoiceMix,
 };
+use crate::timestamp::AutoMotion;
 
 mod audio;
 mod clips;
@@ -355,6 +356,18 @@ pub enum Command {
         /// nearest gap.
         #[serde(default)]
         ripple: bool,
+    },
+    /// Places timestamped visual media exactly at the supplied timeline times.
+    /// A long video is cut at the requested end; a short one is slowed to fill it.
+    /// The whole script is one atomic, undoable edit.
+    PlaceTimestampScript {
+        /// Pasted rows: `HH:MM:SS - HH:MM:SS | Image 1`, using media-bin labels.
+        script: String,
+        /// The picture lane where all rows are placed.
+        track_id: String,
+        /// Optional automatic movement for each placed picture.
+        #[serde(default)]
+        motion: AutoMotion,
     },
     /// Places a title: a clip with no media behind it, named after the
     /// text's first line, minting a "c" id.
@@ -1034,6 +1047,12 @@ pub enum CommandError {
     /// A clip-placing command named a track no longer on the timeline.
     #[error("That track no longer exists.")]
     TrackGone,
+    /// A timestamp script could not be parsed or its media could not be resolved.
+    #[error("{reason}")]
+    InvalidTimestampScript {
+        /// The line-specific reason to show the user.
+        reason: String,
+    },
     /// A first-free-track placement found a timeline with no tracks at all.
     #[error("There are no tracks.")]
     NoTracks,
@@ -1373,6 +1392,7 @@ pub fn apply(
         command @ (Command::AddClip { .. }
         | Command::AddClipAtFirstFree { .. }
         | Command::AddClipsInSequence { .. }
+        | Command::PlaceTimestampScript { .. }
         | Command::AddTextClip { .. }
         | Command::AddShapeClip { .. }
         | Command::AddLayerClip { .. }

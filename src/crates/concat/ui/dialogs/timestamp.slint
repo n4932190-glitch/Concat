@@ -1,0 +1,201 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Jareer Abdullah
+
+import { I18n } from "../i18n.slint";
+import { Theme } from "../theme/theme.slint";
+import { Glyph } from "../icons.slint";
+import { Button, DialogRow, DialogSection, Modal } from "../primitives/modal.slint";
+import { Select } from "../primitives/select.slint";
+import { ResizeBox } from "../primitives/resize-box.slint";
+
+// The timestamp importer keeps the script editable while validating it against
+// the current project. Rust owns parsing, media matching and timeline checks;
+// this component only shows the result and submits the exact text.
+export component TimestampForm inherits VerticalLayout {
+    in property <string> script;
+    in property <string> validation;
+    in property <[string]> tracks;
+    in property <int> track;
+    in property <int> motion;
+    in property <int> row-count;
+    in property <bool> can-apply;
+
+    callback script-edited(text: string);
+    callback track-changed(index: int);
+    callback motion-changed(index: int);
+    callback apply();
+
+    property <string> draft;
+    property <bool> typing;
+
+    changed script => {
+        if (!root.typing) {
+            root.draft = root.script;
+        }
+    }
+    init => { root.draft = root.script; }
+
+    DialogSection {
+        first: true;
+        title: I18n.t("timestamp.timelineTarget");
+
+        DialogRow {
+            label: I18n.t("timestamp.pictureTrack");
+            Select {
+                options: root.tracks;
+                current: root.track;
+                placeholder: I18n.t("timestamp.noPictureTrack");
+                enabled: root.tracks.length > 0;
+                changed(index) => { root.track-changed(index); }
+            }
+        }
+
+        DialogRow {
+            label: I18n.t("timestamp.automaticMotion");
+            Select {
+                options: [I18n.t("timestamp.motionNone"), I18n.t("timestamp.motionZoomIn"), I18n.t("timestamp.motionZoomOut"), I18n.t("timestamp.motionVerticalScroll")];
+                current: root.motion;
+                changed(index) => { root.motion-changed(index); }
+            }
+        }
+    }
+
+    DialogSection {
+        title: I18n.t("timestamp.script");
+
+        script-box := ResizeBox {
+            content-height: script-input.preferred-height;
+            focused: script-input.has-focus;
+
+            script-input := TextInput {
+                y: script-box.pad-y;
+                width: parent.width;
+                height: Math.max(self.preferred-height, script-box.view-height);
+                cursor-position-changed(at) => {
+                    script-box.reveal(at.y, self.font-size * 1.4);
+                }
+                text <=> root.draft;
+                color: Theme.fg;
+                font-size: Theme.fs-lg;
+                single-line: false;
+                wrap: word-wrap;
+                selection-background-color: Theme.accent;
+                selection-foreground-color: Theme.on-accent;
+                changed has-focus => { root.typing = self.has-focus; }
+                edited => { root.script-edited(self.text); }
+                // Home and End should move within the pasted script rather
+                // than bubbling up to the editor's playhead shortcuts.
+                key-pressed(event) => {
+                    if (event.text == Key.Home) {
+                        self.set-selection-offsets(0, 0);
+                        return accept;
+                    }
+                    if (event.text == Key.End) {
+                        self.set-selection-offsets(1000000000, 1000000000);
+                        return accept;
+                    }
+                    return reject;
+                }
+            }
+
+            if root.draft == "" && !script-input.has-focus: Text {
+                x: 0;
+                y: script-box.pad-y;
+                text: I18n.t("timestamp.example");
+                color: Theme.fg-dim;
+                font-size: Theme.fs;
+                wrap: word-wrap;
+            }
+        }
+
+        Text {
+            text: I18n.t("timestamp.scriptHelp");
+            color: Theme.fg-muted;
+            font-size: Theme.fs-sm;
+            wrap: word-wrap;
+        }
+    }
+
+    DialogSection {
+        title: I18n.t("timestamp.validation");
+
+        Rectangle {
+            width: parent.width;
+            border-radius: Theme.r;
+            background: Theme.field;
+
+            VerticalLayout {
+                padding: 10px;
+                spacing: 5px;
+
+                Text {
+                    text: root.can-apply
+                        ? I18n.t1("timestamp.ready", "\{root.row-count}")
+                        : I18n.t("timestamp.notReady");
+                    color: Theme.fg;
+                    font-size: Theme.fs;
+                    font-weight: 600;
+                }
+
+                Text {
+                    text: root.validation;
+                    color: Theme.fg-muted;
+                    font-size: Theme.fs-sm;
+                    wrap: word-wrap;
+                }
+            }
+        }
+    }
+
+    VerticalLayout {
+        padding: 14px;
+        spacing: 8px;
+
+        Button {
+            block: true;
+            primary: true;
+            large: true;
+            glyph: Glyph.clock;
+            label: I18n.t("timestamp.place");
+            enabled: root.can-apply;
+            clicked => { root.apply(); }
+        }
+    }
+}
+
+export component TimestampDialog inherits Modal {
+    in property <bool> opened;
+    in property <string> script;
+    in property <string> validation;
+    in property <[string]> tracks;
+    in property <int> track;
+    in property <int> motion;
+    in property <int> row-count;
+    in property <bool> can-apply;
+
+    callback script-edited(text: string);
+    callback track-changed(index: int);
+    callback motion-changed(index: int);
+    callback apply();
+
+    open: root.opened;
+    title: I18n.t("timestamp.title");
+    glyph: Glyph.clock;
+    surface-width: 560px;
+    dismissable: true;
+
+    TimestampForm {
+        script: root.script;
+        validation: root.validation;
+        tracks: root.tracks;
+        track: root.track;
+        motion: root.motion;
+        row-count: root.row-count;
+        can-apply: root.can-apply;
+
+        script-edited(text) => { root.script-edited(text); }
+        track-changed(index) => { root.track-changed(index); }
+        motion-changed(index) => { root.motion-changed(index); }
+        apply => { root.apply(); }
+    }
+}

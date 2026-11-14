@@ -1926,6 +1926,7 @@ fn command_kind(command: &Command) -> &'static str {
         Command::SetMediaPlaceholder { .. } => "Set media as a template slot",
         Command::FillSlot { .. } => "Fill template slot",
         Command::Batch { .. } => "Several edits",
+        Command::PlaceTimestampScript { .. } => "Place timestamp script",
         Command::AddClip { .. }
         | Command::AddClipAtFirstFree { .. }
         | Command::AddClipsInSequence { .. } => "Add to timeline",
