@@ -1292,15 +1292,13 @@ fn start(project: Option<std::path::PathBuf>, smoke: bool) -> Result<(), slint::
             .enumerate()
             .map(|(index, _)| format!("Track {}", index + 1).into())
             .collect();
-        editor.set_timestamp_script("".into());
-        editor.set_timestamp_tracks(ModelRc::from(VecModel::from(tracks)));
-        editor.set_timestamp_track(0);
-        editor.set_timestamp_motion(0);
-        editor.set_timestamp_row_count(0);
-        editor.set_timestamp_validation(
-            "Paste timestamp rows to validate media and timeline placement.".into(),
-        );
-        editor.set_timestamp_can_apply(false);
+        editor.set_timestamp_tracks(ModelRc::from(VecModel::from(tracks.clone())));
+        let selected = editor.get_timestamp_track();
+        if selected < 0 || selected as usize >= tracks.len() {
+            editor.set_timestamp_track(0);
+        }
+        // Keep the user's draft when the dialog is closed and reopened.
+        refresh_timestamp_validation(state, &editor);
         editor.set_timestamp_open(true);
     }));
     editor.on_timestamp_closed(on_window!(|_state| {
