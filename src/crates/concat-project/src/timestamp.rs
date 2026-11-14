@@ -300,7 +300,7 @@ mod tests {
         let mut editor = Editor::new();
         editor.project_mut().media = project().media;
         editor.apply(Command::PlaceTimestampScript {
-            script: "00:00:00 - 00:00:03 | short.mp4\\n00:00:03 - 00:00:06 | long.mp4".into(),
+            script: "00:00:00 - 00:00:03 | short.mp4\n00:00:03 - 00:00:06 | long.mp4".into(),
             track_id: "T1".into(),
             motion: AutoMotion::ZoomIn,
         }).unwrap();
@@ -325,7 +325,7 @@ mod tests {
         let mut editor = Editor::new();
         editor.project_mut().media = project().media;
         let result = editor.apply(Command::PlaceTimestampScript {
-            script: "00:00:00 - 00:00:03 | short.mp4\\n00:00:03 - 00:00:05 | absent.mp4".into(),
+            script: "00:00:00 - 00:00:03 | short.mp4\n00:00:03 - 00:00:05 | absent.mp4".into(),
             track_id: "T1".into(),
             motion: AutoMotion::None,
         });
