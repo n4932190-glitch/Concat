@@ -414,7 +414,7 @@ export component TimelineTray inherits Rectangle {
 
         TrayButton {
             glyph: Glyph.clock;
-            label: "Timestamp script";
+            label: I18n.t("timestamp.title");
             icon-size: 16px;
             checked: Editor.timestamp-open;
             clicked => {

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Jareer Abdullah and Concat contributors
 
+import { I18n } from "../i18n.slint";
 import { Theme } from "../theme/theme.slint";
 import { Glyph } from "../icons.slint";
 import { Button, DialogRow, DialogSection, Modal } from "../primitives/modal.slint";
@@ -36,23 +37,23 @@ export component TimestampForm inherits VerticalLayout {
 
     DialogSection {
         first: true;
-        title: "Timeline target";
+        title: I18n.t("timestamp.timelineTarget");
 
         DialogRow {
-            label: "Picture track";
+            label: I18n.t("timestamp.pictureTrack");
             Select {
                 options: root.tracks;
                 current: root.track;
-                placeholder: "No picture track available";
+                placeholder: I18n.t("timestamp.noPictureTrack");
                 enabled: root.tracks.length > 0;
                 changed(index) => { root.track-changed(index); }
             }
         }
 
         DialogRow {
-            label: "Automatic motion";
+            label: I18n.t("timestamp.automaticMotion");
             Select {
-                options: ["None", "Zoom In", "Zoom Out", "Vertical Scroll"];
+                options: [I18n.t("timestamp.motionNone"), I18n.t("timestamp.motionZoomIn"), I18n.t("timestamp.motionZoomOut"), I18n.t("timestamp.motionVerticalScroll")];
                 current: root.motion;
                 changed(index) => { root.motion-changed(index); }
             }
@@ -60,7 +61,7 @@ export component TimestampForm inherits VerticalLayout {
     }
 
     DialogSection {
-        title: "Timestamp script";
+        title: I18n.t("timestamp.script");
 
         script-box := ResizeBox {
             content-height: script-input.preferred-height;
@@ -100,7 +101,7 @@ export component TimestampForm inherits VerticalLayout {
             if root.draft == "" && !script-input.has-focus: Text {
                 x: 0;
                 y: script-box.pad-y;
-                text: "00:00:00 - 00:00:05 | Image 1\n00:00:05 - 00:00:09 | Image 2";
+                text: I18n.t("timestamp.example");
                 color: Theme.fg-dim;
                 font-size: Theme.fs;
                 wrap: word-wrap;
@@ -108,7 +109,7 @@ export component TimestampForm inherits VerticalLayout {
         }
 
         Text {
-            text: "One row per clip: HH:MM:SS - HH:MM:SS | Image 1. Milliseconds and SRT arrows are also accepted.";
+            text: I18n.t("timestamp.scriptHelp");
             color: Theme.fg-muted;
             font-size: Theme.fs-sm;
             wrap: word-wrap;
@@ -116,7 +117,7 @@ export component TimestampForm inherits VerticalLayout {
     }
 
     DialogSection {
-        title: "Timeline validation";
+        title: I18n.t("timestamp.validation");
 
         Rectangle {
             width: parent.width;
@@ -129,8 +130,8 @@ export component TimestampForm inherits VerticalLayout {
 
                 Text {
                     text: root.can-apply
-                        ? "\{root.row-count} rows ready to place"
-                        : "Not ready to place";
+                        ? I18n.t1("timestamp.ready", "\{root.row-count}")
+                        : I18n.t("timestamp.notReady");
                     color: Theme.fg;
                     font-size: Theme.fs;
                     font-weight: 600;
@@ -155,7 +156,7 @@ export component TimestampForm inherits VerticalLayout {
             primary: true;
             large: true;
             glyph: Glyph.clock;
-            label: "Place on timeline";
+            label: I18n.t("timestamp.place");
             enabled: root.can-apply;
             clicked => { root.apply(); }
         }
@@ -178,7 +179,7 @@ export component TimestampDialog inherits Modal {
     callback apply();
 
     open: root.opened;
-    title: "Timestamp script";
+    title: I18n.t("timestamp.title");
     glyph: Glyph.clock;
     surface-width: 560px;
     dismissable: true;
