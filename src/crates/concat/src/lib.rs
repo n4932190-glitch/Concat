@@ -197,7 +197,7 @@ fn refresh_timestamp_validation(state: &Studio, editor: &Editor) {
     if script.trim().is_empty() {
         editor.set_timestamp_row_count(0);
         editor.set_timestamp_validation(
-            "Paste timestamp rows to validate media and timeline placement.".into(),
+            i18n::t("timestamp.emptyPrompt").into(),
         );
         editor.set_timestamp_can_apply(false);
         return;
@@ -214,10 +214,10 @@ fn refresh_timestamp_validation(state: &Studio, editor: &Editor) {
             .iter()
             .rev()
             .nth(track_index.max(0) as usize)
-            .ok_or_else(|| "Choose an available picture track.".to_owned())?;
+            .ok_or_else(|| i18n::t("timestamp.chooseTrack"))?;
         let track_id = track.id.clone();
         if state.locked(&track_id) {
-            return Err("The selected track is locked. Unlock it before placing clips.".to_owned());
+            return Err(i18n::t("timestamp.lockedTrack"));
         }
 
         let placements = concat_project::timestamp::resolve(&entries, state.project(), motion)
@@ -229,10 +229,9 @@ fn refresh_timestamp_validation(state: &Studio, editor: &Editor) {
                     && placement.start < clip.start + clip.duration
                     && clip.start < placement.start + placement.duration
             }) {
-                return Err(format!(
-                    "Line {} overlaps existing clip '{}'. Choose an empty track or move that clip first.",
-                    entries[index].line,
-                    existing.name
+                return Err(i18n::tf(
+                    "timestamp.overlapExisting",
+                    &[&entries[index].line, &existing.name],
                 ));
             }
 
@@ -245,10 +244,9 @@ fn refresh_timestamp_validation(state: &Studio, editor: &Editor) {
                         && previous.start < placement.start + placement.duration
                 })
             {
-                return Err(format!(
-                    "Line {} overlaps line {} in the pasted script.",
-                    entries[index].line,
-                    entries[other_index].line
+                return Err(i18n::tf(
+                    "timestamp.overlapRows",
+                    &[&entries[index].line, &entries[other_index].line],
                 ));
             }
         }
@@ -260,7 +258,7 @@ fn refresh_timestamp_validation(state: &Studio, editor: &Editor) {
         Ok(rows) => {
             editor.set_timestamp_row_count(rows as i32);
             editor.set_timestamp_validation(
-                "All media references resolve. No overlaps were found on the selected track.".into(),
+                i18n::t("timestamp.valid").into(),
             );
             editor.set_timestamp_can_apply(true);
         }
